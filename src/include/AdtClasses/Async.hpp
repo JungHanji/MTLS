@@ -98,11 +98,16 @@ class _queue{
     
     _queue(vector<T> &input, vector<T> &output, function<void(vector<T>&, vector<T>&)> async_handler, int task_num):
            this_thread(this_thread), input(input), output(output), async_handler(async_handler), task_num(task_num){
-        thread = new std::thread();
+        this_thread = new std::thread();
     }
 
     _queue(){
         ;
+    }
+
+    ~_queue(){
+        this_thread->detach();
+        delete this_thread;
     }
 
     void wait_until_done(){
@@ -133,7 +138,7 @@ class async{
     }
 
     template<class T>
-    _queue static create_queue(vector<T> &input, vector<T> &output, function<void(vector<T>&, vector<T>&)> async_handler, int task_num){
+    _queue<T> static create_queue(vector<T> &input, vector<T> &output, function<void(vector<T>&, vector<T>&)> async_handler, int task_num){
         ;
     }
 };
