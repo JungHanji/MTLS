@@ -21,6 +21,15 @@ function<void(RT*, PT, Args...)> getLockingWrapped(function<RT(PT, Args...)> fun
     };
 }
 
+template<class T>
+function<void(vector<T>&, vector<T>&)> makeLocking(function<void(vector<T>&, vector<T>&)> func, mutex *tmutex){
+    return [func, tmutex](vector<T>& iv, vector<T>& ov) {
+        tmutex->lock();
+        func(iv, ov);
+        tmutex->unlock();
+    };
+}
+
 template<class RT, class PT, class... Args>
 class future{
     private:
@@ -89,6 +98,7 @@ template<class T>
 class _queue{
     private:
     std::unique_ptr<std::thread> this_thread;
+    std::mutex this_mutex;
     vector<T> &input;
     vector<T> &output;
     function<void(vector<T>&, vector<T>&)> async_handler;
@@ -97,6 +107,7 @@ class _queue{
     
     _queue(vector<T> &input, vector<T> &output, function<void(vector<T>&, vector<T>&)> async_handler):
            input(input), output(output), async_handler(async_handler){
+        async_handler = makeLocking(async_handler, &this_mutex);
         this_thread = std::make_unique<std::thread>(async_handler, std::ref(input), std::ref(output));
     }
 

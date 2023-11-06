@@ -2,10 +2,10 @@
 #include <windows.h>
 
 void handler(vector<int>& iv, vector<int>& ov){
-    cout<<"handler sleep "<<getTimeT()<<endl;
+    cout<<"handler sleep "<<adc::getTimeT()<<endl;
     Sleep(100);
-    cout<<"handler awake "<<getTimeT()<<endl;
-    
+    cout<<"handler awake "<<adc::getTimeT()<<endl;
+
     ov.push_back(*(iv.end()-1) * 2);
     iv.pop_back();
 }
@@ -17,8 +17,8 @@ int main(){
         input, output, handler
     );
 
-    cout<<"queue is working... "<<getTimeT()<<endl;
+    cout<<"queue is working... "<<adc::getTimeT()<<endl;
 
     queue.wait_until_done();
-    printv(output);
+    adc::printv(output);
 }

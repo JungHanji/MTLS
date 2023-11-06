@@ -19,6 +19,8 @@
 
 using namespace std;
 
+namespace adc{
+
 string getTime(){
     auto now = chrono::system_clock::now();
     auto ms = chrono::duration_cast<chrono::milliseconds>(now.time_since_epoch()) % 1000;
@@ -711,3 +713,4 @@ vector<int> range(int rng){
     return {o};
 }
 
+}
