@@ -1,5 +1,6 @@
+#pragma once
 #include <AdtClasses/AdtClasses.hpp>
-#include <MathLib/VectorFuncs.hpp>
+#include "VectorFuncs.hpp"
 #include <random>
 
 typedef vector<vector<float>> matrix_t;

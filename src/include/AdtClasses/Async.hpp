@@ -24,7 +24,7 @@ function<void(RT*, PT, Args...)> getLockingWrapped(function<RT(PT, Args...)> fun
 template<class RT, class PT, class... Args>
 class future{
     private:
-    thread *this_thread = nullptr;
+    std::unique_ptr<std::thread> this_thread;
     function<RT(PT, Args...)> func;
     function<void(RT*, PT, Args...)> wrapped;
     function<void(RT*, PT, Args...)> wrapped_locking;
@@ -45,10 +45,10 @@ class future{
         if(!is_deffered){
         if(!is_locking){
             wrapped = getWrapped<RT, PT, Args...>(func);
-            this_thread = new thread(wrapped, &output, arg, args...);
+            this_thread = std::make_unique<std::thread>(wrapped, &output, arg, args...);
         } else {
             wrapped_locking = getLockingWrapped<RT, PT, Args...>(func, &this_mutex);
-            this_thread = new thread(wrapped_locking, &output, arg, args...);
+            this_thread = std::make_unique<std::thread>(wrapped_locking, &output, arg, args...);
         }
         }
     }
@@ -66,10 +66,10 @@ class future{
         if(is_deffered){
             if(!is_locking){
                 wrapped = getWrapped<RT, PT, Args...>(func);
-                this_thread = new thread(wrapped, &output, arg, args...);
+                this_thread = std::make_unique<std::thread>(wrapped, &output, arg, args...);
             } else {
                 wrapped_locking = getLockingWrapped<RT, PT, Args...>(func, &this_mutex);
-                this_thread = new thread(wrapped_locking, &output, arg, args...);
+                this_thread = std::make_unique<std::thread>(wrapped_locking, &output, arg, args...);
             }
 
             this_thread->join();
@@ -88,30 +88,27 @@ class future{
 template<class T>
 class _queue{
     private:
-    std::thread *this_thread;
+    std::unique_ptr<std::thread> this_thread;
     vector<T> &input;
     vector<T> &output;
     function<void(vector<T>&, vector<T>&)> async_handler;
-    int task_num;
 
     public:
     
-    _queue(vector<T> &input, vector<T> &output, function<void(vector<T>&, vector<T>&)> async_handler, int task_num):
-           this_thread(this_thread), input(input), output(output), async_handler(async_handler), task_num(task_num){
-        this_thread = new std::thread();
+    _queue(vector<T> &input, vector<T> &output, function<void(vector<T>&, vector<T>&)> async_handler):
+           input(input), output(output), async_handler(async_handler){
+        this_thread = std::make_unique<std::thread>(async_handler, std::ref(input), std::ref(output));
     }
 
-    _queue(){
-        ;
-    }
+    void run_detached(){ this_thread->detach(); }
+    void wait_until_done(){ this_thread->join(); }
+
+    _queue(){;}
 
     ~_queue(){
-        this_thread->detach();
-        delete this_thread;
-    }
-
-    void wait_until_done(){
-        ;
+        if (this_thread->joinable()) {
+            this_thread->detach();
+        }
     }
 };
 
@@ -138,8 +135,8 @@ class async{
     }
 
     template<class T>
-    _queue<T> static create_queue(vector<T> &input, vector<T> &output, function<void(vector<T>&, vector<T>&)> async_handler, int task_num){
-        ;
+    nsc::_queue<T> static create_queue(vector<T> &input, vector<T> &output, function<void(vector<T>&, vector<T>&)> async_handler){
+        return nsc::_queue(input, output, async_handler);
     }
 };
 }

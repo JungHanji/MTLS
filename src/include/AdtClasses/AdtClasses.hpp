@@ -31,6 +31,10 @@ string getTime(){
     return ss.str();
 }
 
+time_t getTimeT(){
+    return chrono::system_clock::to_time_t(chrono::system_clock::now());
+}
+
 wstring_convert<codecvt_utf8_utf16<wchar_t>> converter;
 
 wstring stringToWstring(string src){
