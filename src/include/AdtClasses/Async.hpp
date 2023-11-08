@@ -91,7 +91,6 @@ class future{
 
     ~future() {
         this_thread->detach();
-        delete this_thread;
     }
 };
 
