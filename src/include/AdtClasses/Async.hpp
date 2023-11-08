@@ -4,6 +4,7 @@
 #include <mutex>
 
 namespace nsc{
+using namespace adc;
 
 template<class RT, class PT, class... Args>
 function<void(RT*, PT, Args...)> getWrapped(function<RT(PT, Args...)> func ){
