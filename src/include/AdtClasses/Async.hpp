@@ -6,18 +6,18 @@
 namespace nsc{
 using namespace adc;
 
-template<class RT, class PT, class... Args>
-function<void(RT*, PT, Args...)> getWrapped(function<RT(PT, Args...)> func ){
-    return [func](RT* result, PT arg, Args... args) {
-        (*result) = func(arg, args...);
+template<class RT, class... Args>
+function<void(RT*, Args...)> getWrapped(function<RT(Args...)> func ){
+    return [func](RT* result, Args... args) {
+        (*result) = func(args...);
     };
 }
 
-template<class RT, class PT, class... Args>
-function<void(RT*, PT, Args...)> getLockingWrapped(function<RT(PT, Args...)> func, mutex *tmutex){
-    return [func, tmutex](RT* result, PT arg, Args... args) {
+template<class RT, class... Args>
+function<void(RT*, Args...)> getLockingWrapped(function<RT(Args...)> func, mutex *tmutex){
+    return [func, tmutex](RT* result, Args... args) {
         tmutex->lock();
-        (*result) = func(arg, args...);
+        (*result) = func(args...);
         tmutex->unlock();
     };
 }
@@ -31,13 +31,13 @@ function<void(vector<T>&, vector<T>&)> makeLocking(function<void(vector<T>&, vec
     };
 }
 
-template<class RT, class PT, class... Args>
+template<class RT, class... Args>
 class future{
     private:
     std::thread* this_thread;
-    function<RT(PT, Args...)> func;
-    function<void(RT*, PT, Args...)> wrapped;
-    function<void(RT*, PT, Args...)> wrapped_locking;
+    function<RT(Args...)> func;
+    function<void(RT*, Args...)> wrapped;
+    function<void(RT*, Args...)> wrapped_locking;
     mutex this_mutex;
     RT output;
 
@@ -48,49 +48,49 @@ class future{
 
     public:
     
-    future(function<RT(PT, Args...)> func, PT arg, Args... args, bool is_locking = false, bool is_deffered = false) : 
+    future(function<RT(Args...)> func, Args... args, bool is_locking = false, bool is_deffered = false) : 
             func(func), is_locking(is_locking), is_deffered(is_deffered)
     {
         if(!is_deffered){
         if(!is_locking){
-            wrapped = getWrapped<RT, PT, Args...>(func);
-            this_thread = new std::thread(wrapped, &output, arg, args...);
+            wrapped = getWrapped<RT, Args...>(func);
+            this_thread = new std::thread(wrapped, &output, args...);
         } else {
-            wrapped_locking = getLockingWrapped<RT, PT, Args...>(func, &this_mutex);
-            this_thread = new std::thread(wrapped_locking, &output, arg, args...);
+            wrapped_locking = getLockingWrapped<RT, Args...>(func, &this_mutex);
+            this_thread = new std::thread(wrapped_locking, &output, args...);
         }
         }
     }
     future(){;}
 
-    RT get(){
-        if(!is_deffered){
-            this_thread->join();
-            return output;}
-        else
-            throw custom_exception("Cannot use method get(void) with deffered call");
+    // RT get(){
+        // if(!is_deffered){
+            // this_thread->join();
+            // return output;
+        // }
+        // else
+            // throw custom_exception("Cannot use method get(void) with deffered call");
         
-    }
+    // }
 
-    RT get(PT arg, Args... args){
+    RT get(Args... args){
         if(is_deffered){
             if(!is_locking){
-                wrapped = getWrapped<RT, PT, Args...>(func);
-                this_thread = new std::thread(wrapped, &output, arg, args...);
+                wrapped = getWrapped<RT, Args...>(func);
+                this_thread = new std::thread(wrapped, &output, args...);
             } else {
-                wrapped_locking = getLockingWrapped<RT, PT, Args...>(func, &this_mutex);
-                this_thread = new std::thread(wrapped_locking, &output, arg, args...);
+                wrapped_locking = getLockingWrapped<RT, Args...>(func, &this_mutex);
+                this_thread = new std::thread(wrapped_locking, &output, args...);
             }
-
-            this_thread->join();
-        } else {
-            throw custom_exception("Cannot use method get(PT, Args...) with non-deffered call");
         }
+        
+        this_thread->join();
         return output;
     }
 
     ~future() {
-        this_thread->detach();
+        if(this_thread->joinable()) this_thread->detach();
+        delete this_thread;
     }
 };
 
@@ -120,29 +120,30 @@ class _queue{
         if (this_thread->joinable()) {
             this_thread->detach();
         }
+        delete this_thread;
     }
 };
 
 class async{
     public:
-    template<class RT, class PT, class... Args>
-    nsc::future<RT, PT> static call(function<RT(PT, Args...)> func, PT arg, Args... args){
-        return nsc::future<RT, PT>(func, arg, args...);
+    template<class RT, class... Args>
+    nsc::future<RT> static call(function<RT(Args...)> func, Args... args){
+        return nsc::future<RT>(func, args...);
     }
     
-    template<class RT, class PT, class... Args>
-    nsc::future<RT, PT> static lock_call(function<RT(PT, Args...)> func, PT arg, Args... args){
-        return nsc::future<RT, PT>(func, arg, args..., true);
+    template<class RT, class... Args>
+    nsc::future<RT> static lock_call(function<RT(Args...)> func, Args... args){
+        return nsc::future<RT>(func, args..., true);
     }
     
-    template<class RT, class PT, class... Args>
-    nsc::future<RT, PT> static deffered_call(function<RT(PT, Args...)> func, PT arg, Args... args){
-        return nsc::future<RT, PT>(func, arg, args..., false, true);
+    template<class RT, class... Args>
+    nsc::future<RT> static deffered_call(function<RT(Args...)> func, Args... args){
+        return nsc::future<RT>(func, args..., false, true);
     }
 
-    template<class RT, class PT, class... Args>
-    nsc::future<RT, PT> static deffered_lock_call(function<RT(PT, Args...)> func, PT arg, Args... args){
-        return nsc::future<RT, PT>(func, arg, args..., true, true);
+    template<class RT, class... Args>
+    nsc::future<RT> static deffered_lock_call(function<RT(Args...)> func, Args... args){
+        return nsc::future<RT>(func, args..., true, true);
     }
 
     template<class T>
