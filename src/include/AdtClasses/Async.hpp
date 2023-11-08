@@ -91,7 +91,6 @@ class future{
 
     ~future() {
         this_thread->detach();
-        this_thread.reset();
     }
 };
 
@@ -121,7 +120,6 @@ class _queue{
         if (this_thread->joinable()) {
             this_thread->detach();
         }
-        this_thread.reset();
     }
 };
 
