@@ -1,5 +1,5 @@
 #include <AdtClasses/Async.hpp>
-
+using namespace adc;
 
 bool is_prime (int x) {
     std::cout << "Calculating. Please, wait...\n";
@@ -13,7 +13,7 @@ bool is_prime (int x) {
 int main(){
 
     auto fut = nsc::async::call(
-        (function<bool(int)>)is_prime,
+        is_prime,
         313222313
     );
     std::cout << "Checking whether 313222313 is prime.\n";
