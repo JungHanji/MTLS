@@ -2,6 +2,7 @@
 #include "AdtClasses.hpp"
 #include <thread>
 #include <mutex>
+#include <variant>
 
 namespace nsc{
 using namespace adc;
@@ -31,6 +32,14 @@ function<void(vector<T>&, vector<T>&)> makeLocking(function<void(vector<T>&, vec
     };
 }
 
+template<class... Args>
+function<char(Args...)> getVoidWrapped(function<void(Args...)> func) {
+    return [func](Args... args) -> char {
+        func(args...);
+        return {0};
+    };
+}
+
 template<class RT, class... Args>
 class future{
     private:
@@ -39,12 +48,11 @@ class future{
     function<void(RT*, Args...)> wrapped;
     function<void(RT*, Args...)> wrapped_locking;
     mutex this_mutex;
+
     RT output;
 
     bool is_locking = false,
          is_deffered = false;
-
-    
 
     public:
     
@@ -62,16 +70,6 @@ class future{
         }
     }
     future(){;}
-
-    // RT get(){
-        // if(!is_deffered){
-            // this_thread->join();
-            // return output;
-        // }
-        // else
-            // throw custom_exception("Cannot use method get(void) with deffered call");
-        
-    // }
 
     RT get(Args... args){
         if(is_deffered){
@@ -127,23 +125,43 @@ class _queue{
 class async{
     public:
     template<class RT, class... Args>
-    nsc::future<RT> static call(function<RT(Args...)> func, Args... args){
-        return nsc::future<RT>(func, args...);
+    nsc::future<RT> static call(RT(*func)(Args...), Args... args){
+        return nsc::future<RT>((function<RT(Args...)>)func, args...);
+    }
+
+    template<class... Args>
+    nsc::future<char> static call(void(*func)(Args...), Args... args){
+        return nsc::future<char>(getVoidWrapped((function<void(Args...)>)func), args...);
     }
     
     template<class RT, class... Args>
-    nsc::future<RT> static lock_call(function<RT(Args...)> func, Args... args){
-        return nsc::future<RT>(func, args..., true);
+    nsc::future<RT> static lock_call(RT(*func)(Args...), Args... args){
+        return nsc::future<RT>((function<RT(Args...)>)func, args..., true);
+    }
+
+    template<class... Args>
+    nsc::future<char> static lock_call(void(*func)(Args...), Args... args){
+        return nsc::future<char>(getVoidWrapped((function<void(Args...)>)func), args..., true);
     }
     
     template<class RT, class... Args>
-    nsc::future<RT> static deffered_call(function<RT(Args...)> func, Args... args){
-        return nsc::future<RT>(func, args..., false, true);
+    nsc::future<RT> static deffered_call(RT(*func)(Args...), Args... args){
+        return nsc::future<RT>((function<RT(Args...)>)func, args..., false, true);
+    }
+
+    template<class... Args>
+    nsc::future<char> static deffered_call(void(*func)(Args...), Args... args){
+        return nsc::future<char>(getVoidWrapped((function<void(Args...)>)func), args..., false, true);
     }
 
     template<class RT, class... Args>
-    nsc::future<RT> static deffered_lock_call(function<RT(Args...)> func, Args... args){
-        return nsc::future<RT>(func, args..., true, true);
+    nsc::future<RT> static deffered_lock_call(RT(*func)(Args...), Args... args){
+        return nsc::future<RT>((function<RT(Args...)>)func, args..., true, true);
+    }
+
+    template<class... Args>
+    nsc::future<char> static deffered_lock_call(void(*func)(Args...), Args... args){
+        return nsc::future<char>(getVoidWrapped((function<void(Args...)>)func), args..., true, true);
     }
 
     template<class T>
